@@ -33,7 +33,7 @@ for example:
 		name = light
 		type = bool
 		visu = yes
-      		visu_acl = rw
+		visu_acl = rw
 		modbus_on = 1
 		modbus_type = bool
 		modbus_byte = 16384
