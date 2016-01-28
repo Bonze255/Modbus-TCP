@@ -28,15 +28,15 @@ for example:
 <pre>
 [beckhoff]
 	name = Beckhoff PLC
-    [[outputs]]
-		  [[[heizung]]]##raumthermostatfunktion
-			name = heating
-			type = bool
-			visu = yes
-      visu_acl = rw
-			modbus_on = 1
-			modbus_type = bool
-			modbus_byte = 16384
-			modbus_bit = 0          #position in an 16bit string 16<-0
-			modbus_dpt = 1
+    	[[outputs]]
+		[[[light]]]
+		name = light
+		type = bool
+		visu = yes
+      		visu_acl = rw
+		modbus_on = 1
+		modbus_type = bool
+		modbus_byte = 16384
+		modbus_bit = 0          #position in an 16bit string 16<-0
+		modbus_dpt = 1
 </pre>
