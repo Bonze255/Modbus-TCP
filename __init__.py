@@ -2,24 +2,21 @@
 ####################################################################################################
 #PLC MODBUS TCP
 #This Plugin use MODBUS TCP for PLC Kommunication 
-#it is based on the "pymodbus" lib  for Python 
+#it is based on the "pymodbus" lib  for Python #
 #
 #by  Manuel Holländer
 ####################################################################################################  
+#CHANGELOG:
+#22.01.16
+#5000.1 encoding eingefuegt muss ausprobiert werden!
+#encoding vl auf knx encoding umstellen !
+#read() dpt 5/6/5000.1 muss noch optimiert werden 
 
 
-
-import socket
 import time
-import re
-import struct
-import string
 import logging
 import threading
-
 from pprint import pprint
-from array import array
-from datetime import datetime, timedelta
 
 from pymodbus.client.sync import ModbusTcpClient
 from pymodbus.constants import Endian
@@ -125,10 +122,11 @@ class modbus():
     def refresh(self):
         logger.debug('MODBUS cycle started########################################################')
         if self.connected:
-            if self.init_read == 0:                                                                       #beim 1 start auch die Ausgangsregister lesen das STeuerung und Smarthome auf gleichem Stand sind !
+            if self.init_read == 0:                                                                 #1 start Ausgangsregister lesen
                 #self.diag()
                 self.read('out')
                 self.init_read = 1
+                pprint(self._db)
             
             start = time.time()
             werte = self.read()
@@ -142,7 +140,7 @@ class modbus():
 #Items beim start überprüfen, auf modbus_on = 1
 #Items Namen (gads) und Bytes werden peb und pab zugeordnet
 #Bits werden in Bytes einsortiert
-#Momentan sind nur boolische und byte Items möglich
+#
 #
 ####################################################################################################
     def parse_item(self, item):
@@ -157,7 +155,6 @@ class modbus():
             ##Daten zusammenstellen
             daten = []
             daten.append(bit)#0
-            
             if 'modbus_dpt' in item.conf:
                 #length = 8#dpt_dict[item.conf['modbus_dpt']]
                 daten.append(item.conf['modbus_dpt'])#1
@@ -168,7 +165,7 @@ class modbus():
                 
             daten.append(item)#3
             
-            pprint(daten)
+            #pprint(daten)                                                                          #datensatz pro item 
             ##Unterscheidung in in/outputs
             if self.pe_adress <= byte <= (self.pe_adress+self.pe_lenght):                           ##INPUTS
                 if not byte in self._db['in'].keys():
@@ -188,22 +185,7 @@ class modbus():
 ####################################################################################################  
     def update_item(self, item, caller=None, source=None, dest=None):
         if caller == 'modbus':
-            logger.info("Modbus: ITEM DB UPDATEN  sich was geändert hat")
-            # if 'modbus_on' in item.conf:
-                # byte = int(item.conf['modbus_byte'])
-            # ##daten prüfen
-            # if 'modbus_bit' in item.conf:
-                # bit = int(item.conf['modbus_bit'])
-            # value = item()
-            
-            # if self.pe_adress <= byte <= (self.pe_adress+self.pe_lenght):                           ##INPUTS
-                # if bit in sorted(self._db['in'][byte]):  
-                    # self._db['in'][byte][bit][2] = value
-            # elif self.pa_adress <= byte <= (self.pa_adress+self.pa_lenght):                         ##OUTPUTS
-                # if bit in sorted(self._db['out'][byte]):  
-                    # self._db['out'][byte][bit][2] = value
-        # else:
-            # pass
+            pass
 ####################################################################################################
 #AusgangsWORTe an Steuerung schreiben
 #Nur Daten an Steuerung senden
@@ -224,21 +206,41 @@ class modbus():
                         type =      bit[1]
                         value =     bit[2]
                         name =      bit[3]
-                        bit[2] =    bit[3]()                                                           ##aktueller wert des items abrufen und value updaten!
+                        bit[2] =    bit[3]()                                                        ##aktueller wert des items abrufen und value updaten!
                         builder = BinaryPayloadBuilder(endian=Endian.Little)
 
                         ##unterscheidung dateityp
-                        if type == '5' or type == '5.001' or type == '6' :                                          ##8bit uint / int
+                        if type == '5' or type == '5.001' or type == '6' :                          ##8bit uint / int
                             length = 8
                             if bitpos < 8:  #lb
                                 lb = value
                             else:           #hb
                                 hb = value
+                                
                             if type == '5':
                                 builder.add_8bit_uint(lb)
                                 builder.add_8bit_uint(hb)
                                 #logger.debug('MODBUS: 8bit uint {0} ; {1}'.format(lb,hb)) 
+                            elif type == '5.001':                            ##0-100 in 0-255 umwandeln!
+                                #print(dpts.en5001(lb))
+                                #print(dpts.en5001(hb))
+                                
+                                lb = self.de5001(lb)
+                                hb = self.de5001(hb)
+                                print("lb geschrieben", lb )
+                                print("hb geschrieben", hb )
+                                builder.add_8bit_uint(lb)
+                                builder.add_8bit_uint(hb)
+                                #logger.debug('MODBUS: 8bit uint {0} ; {1}'.format(lb,hb)) 
                             elif type == '6':
+                                if lb > 127:
+                                    lb = 127
+                                elif lb < -128:
+                                    lb = -128
+                                if hb > 127:
+                                    hb = 127
+                                elif hb < -128:
+                                    hb = -128
                                 builder.add_8bit_int(lb)
                                 builder.add_8bit_int(hb)
                                 #logger.debug('MODBUS: 8bit int {0} ; {1}'.format(lb.hb)) 
@@ -253,7 +255,7 @@ class modbus():
                             
                         elif type == '1':
                             length = 1
-                                                                                      #nur pro byte einmal die bits wandeln
+                                                                                                    #nur pro byte einmal die bits wandeln
                             if bitpos < 8:  #lb
                                 lb  = lb | int(value) << bitpos
                                 #logger.debug('MODBUS: 8bit int{0}'.format(lb)) 
@@ -266,7 +268,6 @@ class modbus():
                             builder.add_8bit_uint(hb)
                             
                 payload = builder.build()
-                    #pprint(payload)
                 logger.debug('MODBUS: write to PLC: WORD {0} set to {1} '.format(byte,payload)) 
                 self._modbuspy.write_registers(byte, payload, skip_encode=True)
                 builder.reset()        
@@ -315,15 +316,15 @@ class modbus():
                             
                         if bitpos < 8:#lb
                             value = hb
-                            #logger.debug('MODBUS: 8bit int{0}'.format(value)) 
+                            #logger.debug('MODBUS: byte{0} startpos{1} wert (5) {2}'.format(bit, bitpos,value)) 
                         else:#hb
                             value = lb
-                            #logger.debug('MODBUS: 8bit int{0}'.format(value)) 
+                            #logger.debug('MODBUS: byte{0} startpos{1} wert (5) {2}'.format(bit, bitpos,value)) 
                         
                         if type == '5.001':
-                            #print('lb/hb Daten', value)
-                            value = self.normiere(0,100, int(value))
-                            #print (dpts.en5001(value))
+                            print('lb/hb Daten gelesen', value)
+                            value = self.en5001(value)
+                            logger.debug('MODBUS: byte{0} startpos{1} wert (5.001) {2}'.format(bit, bitpos, value)) 
                     elif type == '7' or type == '8':                                                #16bit uint / int
                         length = 16
                         if type == '7':                                                             #0...65535
@@ -352,7 +353,7 @@ class modbus():
                 hb = decodert2.decode_bits()
                 bits = hb+lb
                 decodert2.reset() 
-                logger.debug('MODBUS: read from   PLC {0}-{1} {2}'.format(byte, bits, bytes))
+                logger.debug('MODBUS: read from PLC {0}-{1} {2}'.format(byte, bits, bytes))
 
         except Exception as e:
             logger.error('MODBUS: Could not read an InputWord, because {}'.format( e))
@@ -451,10 +452,17 @@ class modbus():
             ausgabe.append(byte[0:8])
             ausgabe.append(byte[8:17])   
         return ausgabe 
-        
-        
-    def normiere(self, min, max, val):
-       #if invert == 0:
-        xy = (100.0 * ((val - min) / (max - min)))
-        return xy
+
+    def de5001(self, value):                                                                        #8bit 0-100 auf 0-255 normieren
+        if value > 255:
+            value = 255
+        elif value < 0:
+            value = 0
+        return int(round(value*2.55))
+    def en5001(self, value):                                                                        #8bit auf 0-100 normieren
+        if value > 255:
+            value = 255
+        elif value < 0:
+            value = 0
+        return (round((value/2.55), 2))
    
