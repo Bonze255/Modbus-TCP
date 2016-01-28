@@ -12,14 +12,14 @@ https://github.com/bashwork/pymodbus
 [modbus]
 	class_name = modbus
 	class_path = plugins.modbus
-	device = 192.168.178.24	#IP adress of Modbus device
-	port = 502 						  #standart 502 for Modbus
-	timeout = 1000 				  #ms
-	cycle = 2							  #s
-	pe_adress = 0					  #start of input Registers
-	pe_length = 16 				  #length of the input registers
-	pa_adress = 16384			  #start of output Registers
-	pa_length = 16	        #length of the ouput registers
+	device = 192.168.178.24		#IP adress of Modbus device
+	port = 502 			#standart 502 for Modbus
+	timeout = 1000 			#ms
+	cycle = 2			#s
+	pe_adress = 0			#start of input Registers
+	pe_length = 16 			#length of the input registers
+	pa_adress = 16384		#start of output Registers
+	pa_length = 16	        	#length of the ouput registers
 </pre>
 
 
