@@ -29,6 +29,7 @@ for example:
 [beckhoff]
 	name = Beckhoff PLC
     	[[outputs]]
+    	name = outputs
 		[[[light]]]
 		name = light
 		type = bool
