@@ -6,11 +6,7 @@
 #
 #by  Manuel Holländer
 ####################################################################################################  
-#CHANGELOG:
-#22.01.16
-#5000.1 encoding eingefuegt muss ausprobiert werden!
-#encoding vl auf knx encoding umstellen !
-#read() dpt 5/6/5000.1 muss noch optimiert werden 
+
 
 
 import time
@@ -123,7 +119,6 @@ class modbus():
         logger.debug('MODBUS cycle started########################################################')
         if self.connected:
             if self.init_read == 0:                                                                 #1 start Ausgangsregister lesen
-                #self.diag()
                 self.read('out')
                 self.init_read = 1
                 pprint(self._db)
@@ -147,23 +142,22 @@ class modbus():
         
         if 'modbus_on' in item.conf:
             byte = int(item.conf['modbus_byte'])
-            ##daten prüfen
+
             if 'modbus_bit' in item.conf:
                 bit = int(item.conf['modbus_bit'])
             else:
                bit = None  
-            ##Daten zusammenstellen
+                                                                                                    ##Daten zusammenstellen
             daten = []
-            daten.append(bit)#0
+            daten.append(bit)                                                                       #0
             if 'modbus_dpt' in item.conf:
-                #length = 8#dpt_dict[item.conf['modbus_dpt']]
-                daten.append(item.conf['modbus_dpt'])#1
-                daten.append(item())#2
-            else:
-                daten.append(1)#1
-                daten.append(bool(item()))#2
+                daten.append(item.conf['modbus_dpt'])                                               #1
+                daten.append(item())                                                                #2
+            else:                                                                                   #oder
+                daten.append(1)                                                                     #1
+                daten.append(bool(item()))                                                          #2
                 
-            daten.append(item)#3
+            daten.append(item)                                                                      #3
             
             #pprint(daten)                                                                          #datensatz pro item 
             ##Unterscheidung in in/outputs
@@ -188,17 +182,16 @@ class modbus():
             pass
 ####################################################################################################
 #AusgangsWORTe an Steuerung schreiben
-#Nur Daten an Steuerung senden
+#
 #
 #
 #
 ####################################################################################################  
     def write(self):
-        #print("BYTES SENDEN#####################################")        
         try: 
             lb = 00000000
             hb = 00000000
-    #### byte besteht immer aus 16 bits
+            #### byte besteht immer aus 16 bits
             for byte in self._db['out']:
                 for bit in sorted(self._db['out'][byte]):  
                     if bit in self._db['out'][byte]:
@@ -227,8 +220,8 @@ class modbus():
                                 
                                 lb = self.de5001(lb)
                                 hb = self.de5001(hb)
-                                print("lb geschrieben", lb )
-                                print("hb geschrieben", hb )
+                                #print("lb geschrieben", lb )
+                                #print("hb geschrieben", hb )
                                 builder.add_8bit_uint(lb)
                                 builder.add_8bit_uint(hb)
                                 #logger.debug('MODBUS: 8bit uint {0} ; {1}'.format(lb,hb)) 
@@ -292,6 +285,7 @@ class modbus():
         try:
             for byte in self._db[x]:
                 rr = self._modbuspy.read_holding_registers(byte,2)
+                pprint(rr)
                 decodert2 = BinaryPayloadDecoder.fromRegisters(rr.registers, endian=Endian.Little)
                 ##prüfen welcher dpt typ vorliegt und  dann das registerabfrage ergebnis aufdröseln:
                 #->decode_16bit_uint()  -> 7 / 8
@@ -322,9 +316,9 @@ class modbus():
                             #logger.debug('MODBUS: byte{0} startpos{1} wert (5) {2}'.format(bit, bitpos,value)) 
                         
                         if type == '5.001':
-                            print('lb/hb Daten gelesen', value)
+                            #print('lb/hb Daten gelesen', value)
                             value = self.en5001(value)
-                            logger.debug('MODBUS: byte{0} startpos{1} wert (5.001) {2}'.format(bit, bitpos, value)) 
+                            #logger.debug('MODBUS: byte{0} startpos{1} wert (5.001) {2}'.format(bit, bitpos, value)) 
                     elif type == '7' or type == '8':                                                #16bit uint / int
                         length = 16
                         if type == '7':                                                             #0...65535
@@ -368,63 +362,7 @@ class modbus():
 #
 #
 ####################################################################################################  
-    def diag(self):
-        self.status()
-        self.cnt_io()
-        self.k_bus()
-        self.diag_all()
-        
-    def cnt_io(self):
-        rr = self._modbuspy.read_holding_registers(4114,2)# anzahl klemmen
-        pprint(rr)
-        decodert2 = BinaryPayloadDecoder.fromRegisters(rr.registers, endian=Endian.Little)
-        x = decodert2.decode_16bit_uint()
-        decodert2.reset()
-        print('Anzahl IO`s' , x)
-        return x
-        
-    def k_bus(self):#0x6102
-    
-        rr = self._modbuspy.read_holding_registers(24834,2)# K bus Fehler?
-        decodert2 = BinaryPayloadDecoder.fromRegisters(rr.registers, endian=Endian.Little)
-        x = decodert2.decode_8bit_uint()
-        y = decodert2.decode_8bit_uint()
-        decodert2.reset()
-        
-        if x == 1:#6105
-            rr = self._modbuspy.read_holding_registers(24837,2)#Welcher Fehler?
-            pprint(rr)
-            decodert2 = BinaryPayloadDecoder.fromRegisters(rr.registers, endian=Endian.Little)
-            x = decodert2.decode_16bit_uint()
-            decodert2.reset()
-            if x == "1": 
-                print('KL_COMMAND_ERROR')
-            elif x == "2":
-                print('KL_INP_DATA_ERROR')
-            elif x == "4": 
-                print('KL_COMMAND_ERROR')
-            elif x == "8":
-                print('KL_TIMEOUT_ERROR')
-            elif x == "6": 
-                print('KL_HDR_ERROR ')
-            elif x == "16":
-                print('KL_RESET_ERROR')
-        return None 
-        
-    def status(self):#0x100C 
-        rr = self._modbuspy.read_holding_registers(4108,2)#Buskoppler status
-        decodert2 = BinaryPayloadDecoder.fromRegisters(rr.registers, endian=Endian.Little)
-        x = decodert2.decode_16bit_uint()
-        decodert2.reset()
-        print('Buskoppler Status ' , x )
-        return None
-    def diag_all(self):#0x100B
-        rr = self._modbuspy.read_holding_registers(4107,2)#Buskoppler status
-        decodert2 = BinaryPayloadDecoder.fromRegisters(rr.registers, endian=Endian.Little)
-        x = decodert2.decode_16bit_uint()
-        decodert2.reset()
-        print('Buskoppdiag' , x )
-        return None   
+
     def toBinary2(self, n, invert = 1):##
         byte = '{:08b}'.format(n)
          
