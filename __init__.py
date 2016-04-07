@@ -46,7 +46,7 @@ class modbus():
 #
 #
 ####################################################################################################  
-    def __init__(self, smarthome, readonly = 'false', trigger = 0, 'mode ='client', name='',device='', timeout=None, port=502, cycle=5, pe_adress = 0, pe_length= 0, pa_adress= 0, pa_length= 0):
+    def __init__(self, smarthome, readonly = 'false', trigger = 0, mode ='client', name='',device='', timeout=None, port=502, cycle=5, pe_adress = 0, pe_length= 0, pa_adress= 0, pa_length= 0):
         ##Initialdaten aus Plugin.conf
         self._sh = smarthome
         self._items = {}
@@ -77,7 +77,7 @@ class modbus():
         self.pa_adress = int(pa_adress)
         self.pa_lenght = int(pa_length)
             
-        if self.mode() = 'server':
+        if self.mode() == 'server':
             #Server
             store = ModbusSlaveContext(
             di = ModbusSequentialDataBlock(0, [17]*100),
@@ -103,6 +103,7 @@ class modbus():
                 logger.info('MODBUS TCP doesnt send anything on the BUS!###############################################')
         self._lock = threading.Lock()
         smarthome.connections.monitor(self)
+        
     def run(self):##plugin starten
         self.alive = True
         self._sh.scheduler.add('Modbus', self.refresh, cycle=self.cycle)
@@ -119,7 +120,7 @@ class modbus():
     def connect(self): #Verbinden/socket oeffnen
         self._lock.acquire()
         target = None
-        if self.mode() = 'client':
+        if self.mode() == 'client':
             try:
                 if self.device is not None:
                     self._modbuspy = ModbusTcpClient(self.device, self.port)
@@ -138,7 +139,7 @@ class modbus():
             self._lock.release()
 
     def disconnect(self): #Verbindung trennen/socket schließen
-        if self.mode() = 'client':
+        if self.mode() == 'client':
             if self.connected:
                 try:
                     if self_socket is not None:
@@ -146,7 +147,7 @@ class modbus():
                 except:
                     pass
                 
-                logger.info('MODBUS: Disconnected!')
+                logger.info('MODBUS:  Disconnected!')
                 self.connected = False
                 self._target = None
 ####################################################################################################
@@ -158,7 +159,7 @@ class modbus():
 ####################################################################################################    
     def refresh(self):
         
-        if self.mode() = 'server':
+        if self.mode() == 'server':
             StartTcpServer(context, identity=identity, address=("localhost", 5020))
             logger.debug('MODBUS Server cycle started')
         else:
@@ -238,8 +239,8 @@ class modbus():
     def write(self):
         if readonly == 'false':
             try: 
-                lb = &H00
-                hb = &H00
+                lb = 0x00
+                hb = 0x00
                 #### byte besteht immer aus 16 bits!
                 for byte in self._db['out']:
                     for bit in sorted(self._db['out'][byte]):  
