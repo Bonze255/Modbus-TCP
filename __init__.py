@@ -228,7 +228,6 @@ class modbus():
                 if caller == 'modbus':
                     logger.debug('MODBUS:'.format(lb)) 
                     #pass
-
 ####################################################################################################
 #AusgangsWORTe an Steuerung schreiben
 #
@@ -239,9 +238,9 @@ class modbus():
     def write(self):
         if readonly == 'false':
             try: 
-                lb = 00000000
-                hb = 00000000
-                #### byte besteht immer aus 16 bits
+                lb = &H00
+                hb = &H00
+                #### byte besteht immer aus 16 bits!
                 for byte in self._db['out']:
                     for bit in sorted(self._db['out'][byte]):  
                         if bit in self._db['out'][byte]:
@@ -250,67 +249,10 @@ class modbus():
                             value =     bit[2]
                             name =      bit[3]
                             bit[2] =    bit[3]()                                                        ##aktueller wert des items abrufen und value updaten!
-                            builder = BinaryPayloadBuilder(endian=Endian.Little)
-
-                            ##unterscheidung dateityp
-                            if type == '5' or type == '5.001' or type == '6' :                          ##8bit uint / int
-                                length = 8
-                                if bitpos < 8:  #lb
-                                    lb = value
-                                else:           #hb
-                                    hb = value
-                                    
-                                if type == '5':
-                                    builder.add_8bit_uint(lb)
-                                    builder.add_8bit_uint(hb)
-                                    #logger.debug('MODBUS: 8bit uint {0} ; {1}'.format(lb,hb)) 
-                                elif type == '5.001':                            ##0-100 in 0-255 umwandeln!
-                                    #print(dpts.en5001(lb))
-                                    #print(dpts.en5001(hb))
-                                    
-                                    lb = self.de5001(lb)
-                                    hb = self.de5001(hb)
-                                    #print("lb geschrieben", lb )
-                                    #print("hb geschrieben", hb )
-                                    builder.add_8bit_uint(lb)
-                                    builder.add_8bit_uint(hb)
-                                    #logger.debug('MODBUS: 8bit uint {0} ; {1}'.format(lb,hb)) 
-                                elif type == '6':
-                                    if lb > 127:
-                                        lb = 127
-                                    elif lb < -128:
-                                        lb = -128
-                                    if hb > 127:
-                                        hb = 127
-                                    elif hb < -128:
-                                        hb = -128
-                                    builder.add_8bit_int(lb)
-                                    builder.add_8bit_int(hb)
-                                    #logger.debug('MODBUS: 8bit int {0} ; {1}'.format(lb.hb)) 
-                            elif type == '7' or type == '8':                                            #16bit uint / int
-                                length = 16
-                                if type == '7':                                                         #0...65535
-                                    builder.add_16bit_uint(value)
-                                    #logger.debug('MODBUS: 16bit uint {0} '.format(value)) 
-                                else:                                                                   #-32768...32767
-                                    builder.add_16bit_int(value)   
-                                    #logger.debug('MODBUS: 16bit int {0}'.format(value)) 
-                                
-                            elif type == '1':
-                                length = 1
-                                                                                                        #nur pro byte einmal die bits wandeln
-                                if bitpos < 8:  #lb
-                                    lb  = lb | int(value) << bitpos
-                                    #logger.debug('MODBUS: 8bit int{0}'.format(lb)) 
-                                    
-                                else:           #hb
-                                    hb  = hb | int(value) << bitpos
-                                    #logger.debug('MODBUS: 8bit int{0}'.format(hb)) 
-                                    
-                                builder.add_8bit_uint(lb)
-                                builder.add_8bit_uint(hb)
-                                
-                    payload = builder.build()
+                            
+                            payload = cast(type,bitpos,value)
+                            
+                    
                     logger.debug('MODBUS: write to PLC: WORD {0} set to {1} '.format(byte,payload)) 
                     self._modbuspy.write_registers(byte, payload, skip_encode=True)
                     builder.reset()        
@@ -319,7 +261,73 @@ class modbus():
                 self._lock.release()
                 return None
         else:
-            logger.info('MODBUS: Could not write an OutWord, because Readonly!')   
+            logger.info('MODBUS: Could not write an OutWord, because Readonly!')  
+#splittet/fuegt values zu einem bytestring 
+#
+#            
+def cast(type, bitpos, value):
+    builder = BinaryPayloadBuilder(endian=Endian.Little)
+##unterscheidung dateityp
+    if type == '5' or type == '5.001' or type == '6' :                          ##8bit uint / int
+        length = 8
+        if bitpos < 8:  #lb
+            lb = value
+        else:           #hb
+            hb = value
+            
+        if type == '5':
+            builder.add_8bit_uint(lb)
+            builder.add_8bit_uint(hb)
+            #logger.debug('MODBUS: 8bit uint {0} ; {1}'.format(lb,hb)) 
+        elif type == '5.001':                            ##0-100 in 0-255 umwandeln!
+            #print(dpts.en5001(lb))
+            #print(dpts.en5001(hb))
+            
+            lb = self.de5001(lb)
+            hb = self.de5001(hb)
+            #print("lb geschrieben", lb )
+            #print("hb geschrieben", hb )
+            builder.add_8bit_uint(lb)
+            builder.add_8bit_uint(hb)
+            #logger.debug('MODBUS: 8bit uint {0} ; {1}'.format(lb,hb)) 
+        elif type == '6':
+            if lb > 127:
+                lb = 127
+            elif lb < -128:
+                lb = -128
+            if hb > 127:
+                hb = 127
+            elif hb < -128:
+                hb = -128
+            builder.add_8bit_int(lb)
+            builder.add_8bit_int(hb)
+            #logger.debug('MODBUS: 8bit int {0} ; {1}'.format(lb.hb)) 
+    elif type == '7' or type == '8':                                            #16bit uint / int
+        length = 16
+        if type == '7':                                                         #0...65535
+            builder.add_16bit_uint(value)
+            #logger.debug('MODBUS: 16bit uint {0} '.format(value)) 
+        else:                                                                   #-32768...32767
+            builder.add_16bit_int(value)   
+            #logger.debug('MODBUS: 16bit int {0}'.format(value)) 
+        
+    elif type == '1':
+        length = 1
+                                                                                #nur pro byte einmal die bits wandeln
+        if bitpos < 8:  #lb
+            lb  = lb | int(value) << bitpos
+            #logger.debug('MODBUS: 8bit int{0}'.format(lb)) 
+            
+        else:           #hb
+            hb  = hb | int(value) << bitpos
+            #logger.debug('MODBUS: 8bit int{0}'.format(hb)) 
+            
+        builder.add_8bit_uint(lb)
+        builder.add_8bit_uint(hb)
+    payload = builder.build()
+    return(payload) 
+
+               
 ####################################################################################################
 #Liest komplett angegebenen Speicherbereich aus Steuerung aus und gibt sie in dict zurück!
 #read = anfangswert, end= länge 
