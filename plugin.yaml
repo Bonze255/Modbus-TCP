@@ -1,0 +1,54 @@
+# Metadata for the ModbusTCP Plugin
+plugin:
+    # Global plugin attributes
+    type: gateway                  # plugin type (gateway, interface, protocol, system, web)
+    description:                  # Alternative: description in multiple languages
+        de: 'Zugriff auf Geräte mit ModbusTCP'
+        en: 'Read Write Data from MODBUS TCP Devices'
+    #maintainer: 'Bonze'
+    #tester: Bonze
+    keywords: communication
+#    documentation: 
+
+    version: 1.0.0              # Plugin version
+    sh_minversion: 1.5           # minimum shNG version to use this plugin
+    multi_instance: False          # plugin supports multi instance
+    classname: ModbusTCP                # class containing the plugin
+
+# Definition of parameters to be configured in etc/plugin.yaml
+# parameters:
+    # host: 
+        # de: 'IP Adresse des Gerätes '
+        # en: 'IP Adress of the Device'
+    # port: 
+        # de: '502'
+        # en: '592'
+    # busmonitor: 
+        # de: 'True/False'
+        # en: 'True/False'
+    # read_cyl_fast: 
+        # de: '3'
+        # en: '3'   
+    # read_cyl_slow:
+        # de: '15'
+        # en: '15'
+    # device:
+        # de: '1'
+        # en: '1'
+
+# item_attributes:
+    # modbus_dpt: 'This attribute is mandatory. If you do not provide one the item will be ignored. The DPT has to match the type of the item!\n
+            # +--------+---------+------+----------------------------------+\n
+            # | DPT    | Data    | Type | Values                           |\n
+            # +========+=========+======+==================================+\n
+            # | 1      | 1 bit   | bool | False | True   0 | 1             |\n
+            # +--------+---------+------+----------------------------------+\n
+            # | 5      | 2 byte  | num  | 0 - 255                          |\n
+            # +--------+---------+------+----------------------------------+\n
+            # | 6      | 4 byte  | num  | 4-Octet Float Value IEEE 754     |\n
+            # +--------+---------+------+----------------------------------+\n'
+
+    # s7_send: 'You could specify one or more group addresses to send updates to. Item update will only be sent if the item is not changed.'
+    # s7_recv: 'You could specify one or more group addresses to recive updates from. Item update will only be sent if the item is not changed.'
+    # s7_read_s: 'You could specify one or more group addresses to monitor for changes. cycle slow'
+    # s7_read_f: 'You could specify one or more group addresses to monitor for changes. cycle fast'
